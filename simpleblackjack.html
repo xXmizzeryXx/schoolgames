@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blackjack</title>
+  <style>
+    body {
+      background: #0b3d91;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      background: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    #game {
+      margin-top: 20px;
+    }
+    canvas {
+      position: fixed;
+      pointer-events: none;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 9999;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Blackjack</h1>
+<div id="game">
+  <div id="player"></div>
+  <div id="dealer"></div>
+  <div id="result"></div>
+
+  <button onclick="hit()">Hit</button>
+  <button onclick="stand()">Stand</button>
+  <button onclick="startGame()">Restart</button>
+</div>
+<canvas id="confetti-canvas"></canvas>
+
+<script>
+let playerCards = [];
+let dealerCards = [];
+let isGameOver = false;
+const confettiCanvas = document.getElementById('confetti-canvas');
+const ctx = confettiCanvas.getContext('2d');
+let confetti = [];
+
+function dealCard() {
+  const cards = [2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10, 11];
+  return cards[Math.floor(Math.random() * cards.length)];
+}
+
+function calculateScore(cards) {
+  let score = cards.reduce((a, b) => a + b, 0);
+  if (score > 21 && cards.includes(11)) {
+    cards[cards.indexOf(11)] = 1;
+    score = cards.reduce((a, b) => a + b, 0);
+  }
+  return score;
+}
+
+function startGame() {
+  playerCards = [dealCard(), dealCard()];
+  dealerCards = [dealCard(), dealCard()];
+  isGameOver = false;
+  document.getElementById('result').innerText = "";
+  confetti = [];
+  updateUI();
+}
+
+function hit() {
+  if (!isGameOver) {
+    playerCards.push(dealCard());
+    updateUI();
+    checkGameOver();
+  }
+}
+
+function stand() {
+  if (!isGameOver) {
+    while (calculateScore(dealerCards) < 17) {
+      dealerCards.push(dealCard());
+    }
+    isGameOver = true;
+    updateUI();
+    determineWinner();
+  }
+}
+
+function updateUI() {
+  document.getElementById('player').innerText = `Your cards: ${playerCards.join(', ')} (Score: ${calculateScore(playerCards)})`;
+  if (isGameOver) {
+    document.getElementById('dealer').innerText = `Dealer's cards: ${dealerCards.join(', ')} (Score: ${calculateScore(dealerCards)})`;
+  } else {
+    document.getElementById('dealer').innerText = `Dealer's first card: ${dealerCards[0]}`;
+  }
+}
+
+function checkGameOver() {
+  if (calculateScore(playerCards) > 21) {
+    isGameOver = true;
+    determineWinner();
+  }
+}
+
+function determineWinner() {
+  const playerScore = calculateScore(playerCards);
+  const dealerScore = calculateScore(dealerCards);
+
+  if (playerScore > 21) {
+    document.getElementById('result').innerText = "You busted! Dealer wins.";
+  } else if (dealerScore > 21) {
+    document.getElementById('result').innerText = "Dealer busted! You win!";
+    launchConfetti();
+  } else if (playerScore === dealerScore) {
+    document.getElementById('result').innerText = "It's a draw!";
+  } else if (playerScore > dealerScore) {
+    document.getElementById('result').innerText = "You win!";
+    launchConfetti();
+  } else {
+    document.getElementById('result').innerText = "Dealer wins.";
+  }
+}
+
+function launchConfetti() {
+  for (let i = 0; i < 100; i++) {
+    confetti.push({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight - window.innerHeight,
+      r: Math.random() * 6 + 4,
+      d: Math.random() * 10 + 10,
+      color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+      tilt: Math.random() * 10 - 10
+    });
+  }
+}
+
+function drawConfetti() {
+  ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+  confetti.forEach((c, i) => {
+    ctx.beginPath();
+    ctx.lineWidth = c.r;
+    ctx.strokeStyle = c.color;
+    ctx.moveTo(c.x + c.tilt + c.r / 2, c.y);
+    ctx.lineTo(c.x + c.tilt, c.y + c.tilt + c.d / 2);
+    ctx.stroke();
+    
+    c.y += Math.cos(c.d) + 1 + c.r / 2;
+    c.x += Math.sin(c.d);
+
+    if (c.y > window.innerHeight) {
+      confetti[i] = {
+        x: Math.random() * window.innerWidth,
+        y: -10,
+        r: c.r,
+        d: c.d,
+        color: c.color,
+        tilt: c.tilt
+      };
+    }
+  });
+}
+
+function resizeCanvas() {
+  confettiCanvas.width = window.innerWidth;
+  confettiCanvas.height = window.innerHeight;
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+setInterval(drawConfetti, 30);
+
+startGame();
+</script>
+
+</body>
+</html>
